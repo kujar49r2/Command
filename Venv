@@ -1,0 +1,9 @@
+Виртуальное окружение:
+	which python3 - где установлен интерпретатор
+	sudo apt install python3-venv
+	python3 -m  pip install virtualenv
+	
+	python3 -m venv venv – создать вирт окружение
+	source venv/bin/activate – активация вирт окружения, либо . ./myenv/bin/activate
+	deactivate – деактивация
+

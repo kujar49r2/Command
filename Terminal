@@ -1,0 +1,6 @@
+Команды terminal:	
+	echo "First file text" > first-file.txt - создать файл в текущей дирректории с заданным текстом и именем
+	cat first-file.txt - прочитать содержимое файла
+	mkdir first-folder - создать папку
+	
+

@@ -1,0 +1,247 @@
+DJANGO
+django-admin startproject mysite – создание проекта misite
+
+python3 manage.py runserver – запустить сервер
+python3 manage.py runserver  1.2.3.4:4000 – запустить сервер по опр адресу
+
+python3 manage.py startapp news – создание приложения blog
+
+Отредактируйте файл settings.py, добавив news.apps.NewsConfig в настроечный параметр INSTALLED_APPS.
+
+MVC = MTV
+model = model
+view = template
+controller = view
+
+views - связующее звено между моделями и представлениями (template)
+Во views пишем классы и функции:
+	from django.http import HttpResponse
+	def index(request):
+	    print(request)
+	    return HttpResponse('Hello world')
+
+В mysite/urls регаем эту функцию:
+	from news.views import index
+	urlpatterns = [
+	    path('admin/', admin.site.urls),
+	    path('news/', index),
+	]
+Это плохая практика, получается очень много маршрутов и при переносе приложения в проекте опять надо прописывать множество маршрутов, потому надо делать свой urls в каждом приложении:
+В mysite/urls дописываем from django.urls import path, include
+	urlpatterns = [
+	    path('admin/', admin.site.urls),
+	    path('news/', include('news.urls')),
+	]
+Создаем файл urls.py в news. В нем пишем:
+	from django.urls import path
+	from .views import *
+
+	urlpatterns = [
+	    path('', index), # пустая строка потому что при вызове из корневого urls слово news отбрасывается
+	    path('test/', test) # вызывается news/ и добавляется test/
+	]
+
+Типы данных в модели имеют название integerField и делают 3 вещи:
+	- указывают на тип данных в базе данных
+	- рисуют соответствующую форму для текста на странице
+	- проводят валидацию данных (в числовой тип строку не занести)
+
+В models пишем:
+	from django.db import models
+
+	class News(models.Model):
+	    title = models.CharField(max_length=150)
+	    content = models.TextField(blank=True) # blank=True - не обязательно к заполнению
+	    created_at = models.DateTimeField(auto_now_add=True) # записать время только один раз при создании
+	    updated_at = models.DateTimeField(auto_now=True) # обновлять время каждый раз при редактировании
+	    photo = models.ImageField(upload_to='photos/%y/%m/%d/') # сохранять изображения по указанному пути
+	    is_published = models.BooleanField()
+	    
+	    def __str__(self):
+        	return self.title
+
+Все изменения в базе данных прописываются в папке migrations - что то типа контроля версий для моделей
+Рекомендуется продумывать заранее структуру модели, связи, потом менять проблематично, но возможно
+
+python3 manage.py makemigrations - создаем файлы миграции
+python3 manage.py migrate - миграции базы данных. В результате применения изначальных настроек в базе данных создаются таблицы для приложений, перечисленных в настроечном параметре INSTALLED_APPS.
+python3 manage.py sqlmigrate news 0001 - посмотреть sql команды миграции
+
+Дописываем в settings в конец для сохранения изображений:
+	MEDIA_ROOT = os.path.join(BASE_DIR, 'media') # создать папку медиа в базовой дирректории для хранения изображений
+	MEDIA_URL = '/media/' # для построения url
+	
+Чтобы загруженные изображения отображались на сайте необходимо создать маршруты.
+В коневой urls дописываем:
+	from django.conf import settings
+	from django.conf.urls.static import static
+	if settings.DEBUG: # формируем маршрут только в отладочном режиме, в режиме развертывания на хостинге debug будет false
+	    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+Основы работы с CRUD
+python3 manage.py shell - вход в интерактивную консоль django
+тут пишем:
+	>>> from news.models import News	
+	>>> News(title='Новость 1', content='Контент новости 1') - создаем новость
+	>>> news1 = _ - присваиваем переменной. _ - это последнее значение
+	>>> news1.save() - записываем в базу данных. После этой команды присваивается номер id
+	>>> news2 = News(title='Новость 2', content='Контент новости 2')
+	>>> news2.save()
+	
+	>>> news3 = News()
+	>>> news3.title = 'Новость 3'
+	>>> news3.content = 'Контент новости 3'
+	>>> news3.save()
+	
+	>>> news4 = News.objects.create(title='Новость 4', content='контент новости 4') - сразу сохраняет в базу без save()
+	>>> news4.pk - тоже самое что и id
+	
+	>>> News(title='Новость 5', content='контент новости 5').save() - можно сразу сохранить в базу так
+	>>> News.objects.create(title='Новость 6', content='контент новости 6') - либо так
+	
+	>>> news = News.objects.all()
+	>>> for item in news:
+		print(item.title, item.is_published) - можно итерироваться
+	
+	>>> News.objects.filter(title='News 5') - вернуть по условию
+	>>> News.objects.get(title='News 5') - вернуть по условию, надо по уникальному значению, чтоб возвращался один объект, иначе выдает ошибку
+	
+	>>> news4 = News.objects.get(pk=4)
+	>>> news4.title = 'news 4 rename'
+	>>> news4.save()                 - изменить данные в определенной строчке
+	
+	>>> news6 = News.objects.get(pk=6)
+	>>> news6.delete()                 - удалить запись в БД
+	
+	>>> News.objects.order_by('title') - сортировка по полю
+	>>> News.objects.exclude(title='News 5') - вернуть объекты с исключенным title=News5
+	
+Шаблоны:
+Можно написать в views.py: - но это просто для примера
+	from .models import News
+
+	def index(request):
+	    news = News.objects.all()
+	    res = '<h1>Список новостей</h1>'
+	    for item in news:
+		res += f'<div>\n<p>{item.title}</p>\n<p>{item.content}</p>\n</div>\n<hr>\n'
+	    return HttpResponse(res)
+
+Правильно так:	    
+Создаем папку templates в приложении news. В этой папке создаем папку с названием приложения (news), в ней создаем index.html
+
+В views пишем:
+	def index(request):
+	    news = News.objects.order_by('-created_at') # сортировка по дате создания
+	    context = {
+		'news': news, 
+		'title': 'Список новостей'
+		} 
+	    # news и title - это доступные переменные которые можно вызвать в шаблоне, итерировать news и тд
+	    return render(request, template_name='news/index.html', context=context)
+
+В index.html пишем:
+	<!DOCTYPE html>
+	<html lang="en">
+	<head>
+	    <meta charset="UTF-8">
+	    <title>{{ title }}</title>
+	</head>
+	<body>
+
+	<h1>{{ title }}</h1>
+
+	{{ news }}
+
+	</body>
+	</html>
+	
+Админка
+python3 manage.py createsuperuser
+
+В admin.py добавить:
+	from .models import News
+
+	admin.site.register(News) - регистрируем модель новости	
+	
+Дописываем в class News:	
+	class Meta:
+		verbose_name = 'Новость' # это как будут называться объекты в админке
+		verbose_name_plural = 'Новости'
+		ordering = ['-created_at'] # сортировка. Теперь можно не сортировать в models.py	
+	
+Расширить таблицу с новостями в админке. В admin.py пишем:
+	class NewsAdmin(admin.ModelAdmin):
+	    list_display = ('id', 'title', 'created_at', 'updated_at', 'is_published')
+
+	admin.site.register(News, NewsAdmin)
+
+Изменить названия столбцов в таблице. Для этого для каждого поля модели дописать verbose_name:
+	title = models.CharField(max_length=150, verbose_name='Наименование')
+
+Чтобы сделать ссылками некоторые поля в таблице нужно дописать в admin.py
+	Class NewsAdmin(admin.ModelAdmin):
+	    list_display_links = ('id', 'title') 
+    	    search_fields = ('title', 'content') # поля по которым производить поиск
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

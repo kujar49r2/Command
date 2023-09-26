@@ -1,0 +1,24 @@
+DJANGO
+django-admin startproject mysite – создание проекта misite
+
+python3 manage.py runserver – запустить сервер
+python3 manage.py runserver  1.2.3.4:4000 – запустить сервер по опр адресу
+
+python3 manage.py startapp blog – создание приложения blog
+
+python3 manage.py makemigrations
+
+python3 manage.py migrate - миграции базы данных. В результате применения изначальных настроек в базе данных создаются таблицы для приложений, перечисленных в настроечном параметре INSTALLED_APPS.
+
+python3 manage.py createsuperuser
+
+В admin.py дописываем
+	from .models import Animal либо from .models import *
+	admin.site.register(Animal)
+
+В models можно дописать:
+	def __str__(self):
+        	return self.name - чтобы в admin отображалось имена объектов
+	
+
+
